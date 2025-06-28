@@ -257,9 +257,9 @@ export default function SafetyScreen() {
                   <Text style={styles.safetyMapButtonTitle}>Safety Map</Text>
                   <Text style={styles.safetyMapButtonSubtitle}>View danger zones & heatmap</Text>
                 </View>
-                <View style={styles.safetyMapButtonBadge}>
+                /*<View style={styles.safetyMapButtonBadge}>
                   <Text style={styles.safetyMapButtonBadgeText}></Text>
-                </View>
+                </View>*/
               </View>
             </BlurView>
           </TouchableOpacity>
