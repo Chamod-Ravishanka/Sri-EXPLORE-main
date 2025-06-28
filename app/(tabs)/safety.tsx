@@ -47,9 +47,6 @@ export default function SafetyScreen() {
   const sosAnim = useRef(new Animated.Value(1)).current;
   const alertsAnim = useRef(new Animated.Value(0)).current;
   const slideAnims = useRef<Animated.Value[]>([]).current;
-  const emergencyPanelAnim = useRef(new Animated.Value(0)).current;
-  const emergencyCardsAnims = useRef<Animated.Value[]>([]).current;
-  const shareLocationAnim = useRef(new Animated.Value(0)).current;
 
   // Real-time safety alerts
   const [safetyAlerts, setSafetyAlerts] = useState<SafetyAlert[]>([
@@ -148,47 +145,6 @@ export default function SafetyScreen() {
     animateAlerts();
   }, [safetyAlerts]);
 
-  useEffect(() => {
-    if (showSOSPanel) {
-      // Initialize emergency cards animations
-      emergencyContacts.forEach((_, index) => {
-        if (!emergencyCardsAnims[index]) {
-          emergencyCardsAnims[index] = new Animated.Value(0);
-        }
-      });
-
-      // Animate emergency panel entrance
-      Animated.sequence([
-        Animated.timing(emergencyPanelAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.stagger(100, [
-          ...emergencyCardsAnims.map(anim =>
-            Animated.spring(anim, {
-              toValue: 1,
-              tension: 100,
-              friction: 8,
-              useNativeDriver: true,
-            })
-          ),
-          Animated.spring(shareLocationAnim, {
-            toValue: 1,
-            tension: 100,
-            friction: 8,
-            useNativeDriver: true,
-          }),
-        ]),
-      ]).start();
-    } else {
-      // Reset animations when panel closes
-      emergencyPanelAnim.setValue(0);
-      emergencyCardsAnims.forEach(anim => anim.setValue(0));
-      shareLocationAnim.setValue(0);
-    }
-  }, [showSOSPanel]);
-
   const getAlertColor = (type: string) => {
     switch (type) {
       case 'critical': return '#FF6B6B';
@@ -208,23 +164,6 @@ export default function SafetyScreen() {
   };
 
   const handleEmergencyCall = (contact: any) => {
-    // Add haptic feedback animation
-    const cardIndex = emergencyContacts.findIndex(c => c.number === contact.number);
-    if (emergencyCardsAnims[cardIndex]) {
-      Animated.sequence([
-        Animated.timing(emergencyCardsAnims[cardIndex], {
-          toValue: 0.9,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-        Animated.timing(emergencyCardsAnims[cardIndex], {
-          toValue: 1,
-          duration: 100,
-          useNativeDriver: true,
-        }),
-      ]).start();
-    }
-
     Alert.alert(
       'Emergency Call',
       `Call ${contact.name} at ${contact.number}?`,
@@ -245,20 +184,6 @@ export default function SafetyScreen() {
   };
 
   const handleShareLocation = () => {
-    // Animate share location button
-    Animated.sequence([
-      Animated.timing(shareLocationAnim, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(shareLocationAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
     Alert.alert(
       'Share Location',
       'Share your current location with emergency contacts?',
@@ -463,7 +388,7 @@ export default function SafetyScreen() {
           </BlurView>
         </TouchableOpacity>
 
-        {/* Enhanced Emergency Panel Modal */}
+        {/* Emergency Panel Modal */}
         <Modal
           visible={showSOSPanel}
           transparent={true}
@@ -471,142 +396,42 @@ export default function SafetyScreen() {
           onRequestClose={() => setShowSOSPanel(false)}
         >
           <View style={styles.modalOverlay}>
-            <Animated.View
-              style={[
-                styles.emergencyPanelContainer,
-                {
-                  opacity: emergencyPanelAnim,
-                  transform: [
-                    {
-                      scale: emergencyPanelAnim.interpolate({
-                        inputRange: [0, 1],
-                        outputRange: [0.8, 1],
-                      }),
-                    },
-                  ],
-                },
-              ]}
-            >
-              <BlurView intensity={95} tint="dark" style={styles.emergencyPanel}>
-                <LinearGradient
-                  colors={['rgba(255, 107, 107, 0.1)', 'rgba(255, 68, 68, 0.05)']}
-                  style={styles.emergencyPanelGradient}
+            <BlurView intensity={90} tint="dark" style={styles.emergencyPanel}>
+              <View style={styles.emergencyHeader}>
+                <Text style={styles.emergencyTitle}>🚨 EMERGENCY PANEL</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowSOSPanel(false)}
                 >
-                  <View style={styles.emergencyHeader}>
-                    <View style={styles.emergencyHeaderContent}>
-                      <View style={styles.emergencyHeaderIcon}>
-                        <Shield size={28} color="#FF6B6B" />
-                      </View>
-                      <View>
-                        <Text style={styles.emergencyTitle}>EMERGENCY PANEL</Text>
-                        <Text style={styles.emergencySubtitle}>Quick access to help</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.closeButton}
-                      onPress={() => setShowSOSPanel(false)}
-                    >
-                      <X size={24} color="#FFFFFF" />
-                    </TouchableOpacity>
-                  </View>
+                  <X size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
 
-                  <ScrollView style={styles.emergencyContent} showsVerticalScrollIndicator={false}>
-                    <View style={styles.emergencyGrid}>
-                      {emergencyContacts.map((contact, index) => {
-                        const cardAnim = emergencyCardsAnims[index] || new Animated.Value(0);
-                        return (
-                          <Animated.View
-                            key={index}
-                            style={[
-                              styles.emergencyCardWrapper,
-                              {
-                                opacity: cardAnim,
-                                transform: [
-                                  {
-                                    scale: cardAnim.interpolate({
-                                      inputRange: [0, 1],
-                                      outputRange: [0.8, 1],
-                                    }),
-                                  },
-                                  {
-                                    translateY: cardAnim.interpolate({
-                                      inputRange: [0, 1],
-                                      outputRange: [20, 0],
-                                    }),
-                                  },
-                                ],
-                              },
-                            ]}
-                          >
-                            <TouchableOpacity
-                              style={styles.emergencyCard}
-                              onPress={() => handleEmergencyCall(contact)}
-                              activeOpacity={0.8}
-                            >
-                              <BlurView intensity={80} tint="light" style={styles.emergencyCardBlur}>
-                                <LinearGradient
-                                  colors={[`${contact.color}15`, `${contact.color}08`]}
-                                  style={styles.emergencyCardGradient}
-                                >
-                                  <View style={[styles.emergencyIcon, { backgroundColor: contact.color }]}>
-                                    <contact.icon size={28} color="#FFFFFF" />
-                                  </View>
-                                  <Text style={styles.emergencyName}>{contact.name}</Text>
-                                  <Text style={[styles.emergencyNumber, { color: contact.color }]}>
-                                    {contact.number}
-                                  </Text>
-                                  <View style={styles.callIndicator}>
-                                    <Phone size={12} color={contact.color} />
-                                    <Text style={[styles.callText, { color: contact.color }]}>Tap to call</Text>
-                                  </View>
-                                </LinearGradient>
-                              </BlurView>
-                            </TouchableOpacity>
-                          </Animated.View>
-                        );
-                      })}
-                    </View>
+              <View style={styles.emergencyGrid}>
+                {emergencyContacts.map((contact, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.emergencyCard}
+                    onPress={() => handleEmergencyCall(contact)}
+                  >
+                    <BlurView intensity={70} tint="light" style={styles.emergencyCardBlur}>
+                      <View style={[styles.emergencyIcon, { backgroundColor: contact.color }]}>
+                        <contact.icon size={24} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.emergencyName}>{contact.name}</Text>
+                      <Text style={styles.emergencyNumber}>{contact.number}</Text>
+                    </BlurView>
+                  </TouchableOpacity>
+                ))}
+              </View>
 
-                    <Animated.View
-                      style={[
-                        styles.shareLocationContainer,
-                        {
-                          opacity: shareLocationAnim,
-                          transform: [
-                            {
-                              scale: shareLocationAnim.interpolate({
-                                inputRange: [0, 1],
-                                outputRange: [0.9, 1],
-                              }),
-                            },
-                          ],
-                        },
-                      ]}
-                    >
-                      <TouchableOpacity style={styles.shareLocationButton} onPress={handleShareLocation}>
-                        <BlurView intensity={80} tint="light" style={styles.shareLocationBlur}>
-                          <LinearGradient
-                            colors={['rgba(32, 178, 170, 0.15)', 'rgba(72, 209, 204, 0.08)']}
-                            style={styles.shareLocationGradient}
-                          >
-                            <View style={styles.shareLocationIcon}>
-                              <Share size={24} color="#20B2AA" />
-                            </View>
-                            <View style={styles.shareLocationTextContainer}>
-                              <Text style={styles.shareLocationText}>Share My Location</Text>
-                              <Text style={styles.shareLocationSubtext}>Send to emergency contacts</Text>
-                            </View>
-                            <View style={styles.shareLocationArrow}>
-                              <Navigation size={16} color="#20B2AA" />
-                            </View>
-                          </LinearGradient>
-                        </BlurView>
-                      </TouchableOpacity>
-                    </Animated.View>
-                  </ScrollView>
-                </LinearGradient>
-              </BlurView>
-            </Animated.View>
+              <TouchableOpacity style={styles.shareLocationButton} onPress={handleShareLocation}>
+                <BlurView intensity={70} tint="light" style={styles.shareLocationBlur}>
+                  <Share size={20} color="#20B2AA" />
+                  <Text style={styles.shareLocationText}>Share My Location</Text>
+                </BlurView>
+              </TouchableOpacity>
+            </BlurView>
           </View>
         </Modal>
 
@@ -1005,45 +830,25 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
-  emergencyPanelContainer: {
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: height * 0.85,
-  },
   emergencyPanel: {
-    borderRadius: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
     overflow: 'hidden',
-    flex: 1,
-  },
-  emergencyPanelGradient: {
-    flex: 1,
+    maxHeight: height * 0.8,
   },
   emergencyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 24,
+    padding: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  emergencyHeaderContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  emergencyHeaderIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: 'rgba(255, 107, 107, 0.2)',
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
   },
   emergencyTitle: {
     fontSize: 20,
@@ -1053,149 +858,68 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  emergencySubtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#FFFFFF',
-    opacity: 0.8,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
   closeButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emergencyContent: {
-    flex: 1,
   },
   emergencyGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     padding: 20,
-    gap: 16,
-  },
-  emergencyCardWrapper: {
-    width: (width - 80) / 2,
+    gap: 12,
   },
   emergencyCard: {
-    borderRadius: 20,
+    width: (width - 80) / 2,
+    borderRadius: 16,
     overflow: 'hidden',
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
   },
   emergencyCardBlur: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  emergencyCardGradient: {
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
-    minHeight: 140,
-    justifyContent: 'space-between',
   },
   emergencyIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    marginBottom: 8,
   },
   emergencyName: {
-    fontSize: 13,
+    fontSize: 12,
     fontFamily: 'Poppins-SemiBold',
     color: '#333',
     textAlign: 'center',
-    marginBottom: 6,
-    lineHeight: 16,
+    marginBottom: 4,
   },
   emergencyNumber: {
-    fontSize: 15,
+    fontSize: 14,
     fontFamily: 'Poppins-Bold',
+    color: '#FF6B6B',
     textAlign: 'center',
-    marginBottom: 8,
-  },
-  callIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  callText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-Medium',
-    marginLeft: 4,
-  },
-  shareLocationContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
   },
   shareLocationButton: {
-    borderRadius: 20,
+    margin: 20,
+    borderRadius: 16,
     overflow: 'hidden',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
   },
   shareLocationBlur: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  shareLocationGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
-    paddingHorizontal: 20,
-  },
-  shareLocationIcon: {
-    width: 48,
-    height: 48,
-    backgroundColor: 'rgba(32, 178, 170, 0.2)',
-    borderRadius: 24,
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  shareLocationTextContainer: {
-    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
   },
   shareLocationText: {
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#20B2AA',
-    marginBottom: 2,
-  },
-  shareLocationSubtext: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#666',
-    opacity: 0.8,
-  },
-  shareLocationArrow: {
-    width: 32,
-    height: 32,
-    backgroundColor: 'rgba(32, 178, 170, 0.1)',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
+    marginLeft: 8,
   },
   reportModal: {
     width: '100%',
