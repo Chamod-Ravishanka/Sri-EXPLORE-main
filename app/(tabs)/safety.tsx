@@ -9,6 +9,7 @@ import {
   Dimensions,
   ImageBackground,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import {
@@ -28,6 +29,7 @@ import {
 const { width } = Dimensions.get('window');
 
 export default function SafetyScreen() {
+  const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('all');
 
   const safetyAlerts = [
@@ -168,6 +170,10 @@ export default function SafetyScreen() {
     ]);
   };
 
+  const openSafetyMap = () => {
+    router.push('/(tabs)/safety-map');
+  };
+
   return (
     <ImageBackground
       source={{
@@ -198,6 +204,25 @@ export default function SafetyScreen() {
               </BlurView>
             </TouchableOpacity>
           </BlurView>
+
+          {/* Safety Map Button - Moved to top for prominence */}
+          <TouchableOpacity style={styles.mapButton} onPress={openSafetyMap}>
+            <BlurView intensity={90} tint="light" style={styles.mapButtonBlur}>
+              <LinearGradient
+                colors={['rgba(255, 107, 107, 0.9)', 'rgba(255, 140, 140, 0.8)']}
+                style={styles.mapButtonGradient}
+              >
+                <MapPin size={28} color="#FFFFFF" />
+                <View style={styles.mapButtonTextContainer}>
+                  <Text style={styles.mapButtonTitle}>Interactive Safety Map</Text>
+                  <Text style={styles.mapButtonSubtitle}>View danger zones & heatmap</Text>
+                </View>
+                <View style={styles.mapButtonBadge}>
+                  <Text style={styles.mapButtonBadgeText}>NEW</Text>
+                </View>
+              </LinearGradient>
+            </BlurView>
+          </TouchableOpacity>
 
           {/* Safety Status */}
           <View style={styles.statusContainer}>
@@ -348,19 +373,6 @@ export default function SafetyScreen() {
             })}
           </View>
 
-          {/* Map View Button */}
-          <TouchableOpacity style={styles.mapButton}>
-            <BlurView intensity={80} tint="light" style={styles.mapButtonBlur}>
-              <LinearGradient
-                colors={['rgba(32, 178, 170, 0.8)', 'rgba(72, 209, 204, 0.8)']}
-                style={styles.mapButtonGradient}
-              >
-                <MapPin size={24} color="#FFFFFF" />
-                <Text style={styles.mapButtonText}>View Safety Map</Text>
-              </LinearGradient>
-            </BlurView>
-          </TouchableOpacity>
-
           {/* Safety Tips */}
           <View style={styles.section}>
             <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
@@ -456,8 +468,65 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
+  mapButton: {
+    margin: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  mapButtonBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  mapButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    position: 'relative',
+  },
+  mapButtonTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  mapButtonTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  mapButtonSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  mapButtonBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  mapButtonBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
   statusContainer: {
-    padding: 20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
   },
   statusCard: {
     borderRadius: 16,
@@ -690,30 +759,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Medium',
     color: '#20B2AA',
     marginLeft: 4,
-  },
-  mapButton: {
-    margin: 20,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  mapButtonBlur: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  mapButtonGradient: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  mapButtonText: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
-    marginLeft: 8,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
   },
   tipsContainer: {
     borderRadius: 16,
