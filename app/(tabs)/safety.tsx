@@ -16,32 +16,7 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import {
-  Shield,
-  TriangleAlert as AlertTriangle,
-  MapPin,
-  Phone,
-  Plus,
-  Users,
-  Clock,
-  Navigation,
-  Eye,
-  MessageCircle,
-  CircleCheck as CheckCircle,
-  Camera,
-  Image as ImageIcon,
-  Video,
-  UserCheck,
-  Flame,
-  Droplets,
-  Building,
-  Zap,
-  X,
-  ChevronDown,
-  Send,
-  Share,
-  AlertCircle,
-} from 'lucide-react-native';
+import { Shield, TriangleAlert as AlertTriangle, MapPin, Phone, Plus, Users, Clock, Navigation, Eye, MessageCircle, CircleCheck as CheckCircle, Camera, Image as ImageIcon, Video, UserCheck, Flame, Droplets, Building, Zap, X, ChevronDown, Send, Share, CircleAlert as AlertCircle } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
