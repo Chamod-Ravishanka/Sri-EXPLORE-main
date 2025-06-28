@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,10 @@ import {
   Alert,
   Dimensions,
   ImageBackground,
+  TextInput,
+  Modal,
+  Animated,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,150 +28,219 @@ import {
   Eye,
   MessageCircle,
   CircleCheck as CheckCircle,
+  Camera,
+  Image as ImageIcon,
+  Video,
+  UserCheck,
+  Flame,
+  Droplets,
+  Building,
+  Zap,
+  X,
+  ChevronDown,
+  Send,
+  Share,
+  AlertCircle,
 } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
+
+interface SafetyAlert {
+  id: number;
+  type: 'critical' | 'warning' | 'info';
+  category: 'fire' | 'flood' | 'general';
+  title: string;
+  location: string;
+  description: string;
+  time: string;
+  distance?: string;
+}
 
 export default function SafetyScreen() {
   const router = useRouter();
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [showSOSPanel, setShowSOSPanel] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportForm, setReportForm] = useState({
+    type: '',
+    location: '',
+    description: '',
+    anonymous: false,
+  });
+  
+  // Animation refs
+  const sosAnim = useRef(new Animated.Value(1)).current;
+  const alertsAnim = useRef(new Animated.Value(0)).current;
+  const slideAnims = useRef<Animated.Value[]>([]).current;
 
-  const safetyAlerts = [
+  // Real-time safety alerts
+  const [safetyAlerts, setSafetyAlerts] = useState<SafetyAlert[]>([
     {
       id: 1,
-      type: 'scam',
-      title: 'Tourist Scam Warning',
-      location: 'Fort Railway Station',
-      description:
-        'Fake taxi drivers overcharging tourists. Verify meter before starting journey.',
-      time: '2 hours ago',
-      severity: 'medium',
-      reports: 5,
-      verified: true,
+      type: 'critical',
+      category: 'fire',
+      title: 'Building Fire Alert',
+      location: 'Galle Face Green, Colombo',
+      description: 'Fire reported at nearby hotel. Avoid the area and follow evacuation routes.',
+      time: '2 min ago',
+      distance: '0.5 km',
     },
     {
       id: 2,
-      type: 'danger',
-      title: 'Road Construction',
-      location: 'Galle Road, Colombo 3',
-      description:
-        'Major road works causing traffic delays. Use alternative routes.',
-      time: '4 hours ago',
-      severity: 'low',
-      reports: 12,
-      verified: true,
+      type: 'warning',
+      category: 'flood',
+      title: 'Flash Flood Warning',
+      location: 'Kandy City Center',
+      description: 'Heavy rainfall causing street flooding. Use alternative routes.',
+      time: '15 min ago',
+      distance: '2.1 km',
     },
     {
       id: 3,
-      type: 'theft',
-      title: 'Pickpocketing Alert',
+      type: 'info',
+      category: 'general',
+      title: 'Tourist Advisory',
       location: 'Pettah Market Area',
-      description:
-        'Increased pickpocketing incidents reported. Keep valuables secure.',
-      time: '6 hours ago',
-      severity: 'high',
-      reports: 8,
-      verified: false,
+      description: 'Increased security presence due to festival celebrations.',
+      time: '1 hour ago',
+      distance: '3.2 km',
     },
-    {
-      id: 4,
-      type: 'weather',
-      title: 'Heavy Rain Warning',
-      location: 'Central Province',
-      description: 'Monsoon rains expected. Avoid travel to hill country.',
-      time: '8 hours ago',
-      severity: 'high',
-      reports: 15,
-      verified: true,
-    },
-  ];
+  ]);
 
   const emergencyContacts = [
-    { name: 'Police Emergency', number: '119', icon: Shield },
-    { name: 'Tourist Police', number: '1912', icon: Users },
-    { name: 'Fire & Rescue', number: '110', icon: AlertTriangle },
-    { name: 'Medical Emergency', number: '1990', icon: Phone },
+    { name: 'Tourist Police', number: '1912', icon: Shield, color: '#FF6B6B' },
+    { name: 'Ambulance', number: '1990', icon: Plus, color: '#32CD32' },
+    { name: 'Fire Department', number: '110', icon: Flame, color: '#FF8C00' },
+    { name: 'Embassy', number: '+94112695299', icon: Building, color: '#4169E1' },
+    { name: 'Personal Contact', number: '+94771234567', icon: UserCheck, color: '#9B59B6' },
   ];
 
-  const filters = [
-    { key: 'all', label: 'All Alerts', count: safetyAlerts.length },
-    {
-      key: 'scam',
-      label: 'Scams',
-      count: safetyAlerts.filter((a) => a.type === 'scam').length,
-    },
-    {
-      key: 'danger',
-      label: 'Dangers',
-      count: safetyAlerts.filter((a) => a.type === 'danger').length,
-    },
-    {
-      key: 'theft',
-      label: 'Theft',
-      count: safetyAlerts.filter((a) => a.type === 'theft').length,
-    },
+  const incidentTypes = [
+    'Theft/Robbery',
+    'Scam/Fraud',
+    'Medical Emergency',
+    'Natural Disaster',
+    'Traffic Accident',
+    'Harassment',
+    'Lost/Stolen Items',
+    'Other',
   ];
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'high':
-        return '#FF6B6B';
-      case 'medium':
-        return '#F4A460';
-      case 'low':
-        return '#32CD32';
-      default:
-        return '#666';
-    }
-  };
+  useEffect(() => {
+    // Start SOS pulsing animation
+    const startSOSAnimation = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(sosAnim, {
+            toValue: 1.2,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sosAnim, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    };
 
-  const getTypeIcon = (type: string) => {
+    // Animate alerts sliding in
+    const animateAlerts = () => {
+      Animated.stagger(200, [
+        Animated.timing(alertsAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        ...safetyAlerts.map((_, index) => {
+          if (!slideAnims[index]) {
+            slideAnims[index] = new Animated.Value(-100);
+          }
+          return Animated.timing(slideAnims[index], {
+            toValue: 0,
+            duration: 600,
+            useNativeDriver: true,
+          });
+        }),
+      ]).start();
+    };
+
+    startSOSAnimation();
+    animateAlerts();
+  }, [safetyAlerts]);
+
+  const getAlertColor = (type: string) => {
     switch (type) {
-      case 'scam':
-        return AlertTriangle;
-      case 'danger':
-        return Shield;
-      case 'theft':
-        return Eye;
-      case 'weather':
-        return Navigation;
-      default:
-        return Shield;
+      case 'critical': return '#FF6B6B';
+      case 'warning': return '#FF8C00';
+      case 'info': return '#4169E1';
+      default: return '#666';
     }
   };
 
-  const filteredAlerts =
-    selectedFilter === 'all'
-      ? safetyAlerts
-      : safetyAlerts.filter((alert) => alert.type === selectedFilter);
-
-  const reportIncident = () => {
-    Alert.alert('Report Incident', 'Choose reporting method:', [
-      {
-        text: 'Quick Report',
-        onPress: () =>
-          Alert.alert('Quick Report', 'Quick report form would open here'),
-      },
-      {
-        text: 'Detailed Report',
-        onPress: () =>
-          Alert.alert(
-            'Detailed Report',
-            'Detailed report form would open here'
-          ),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  const getAlertIcon = (category: string) => {
+    switch (category) {
+      case 'fire': return Flame;
+      case 'flood': return Droplets;
+      case 'general': return AlertTriangle;
+      default: return AlertTriangle;
+    }
   };
 
-  const callEmergency = (number: string, name: string) => {
-    Alert.alert('Emergency Call', `Call ${name} at ${number}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Call',
-        onPress: () => Alert.alert('Calling', `Dialing ${number}...`),
-      },
-    ]);
+  const handleEmergencyCall = (contact: any) => {
+    Alert.alert(
+      'Emergency Call',
+      `Call ${contact.name} at ${contact.number}?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Call Now',
+          style: 'destructive',
+          onPress: () => {
+            if (Platform.OS !== 'web') {
+              // Linking.openURL(`tel:${contact.number}`);
+            }
+            Alert.alert('Calling', `Dialing ${contact.number}...`);
+          },
+        },
+      ]
+    );
+  };
+
+  const handleShareLocation = () => {
+    Alert.alert(
+      'Share Location',
+      'Share your current location with emergency contacts?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Share',
+          onPress: () => Alert.alert('Location Shared', 'Your location has been shared with emergency contacts'),
+        },
+      ]
+    );
+  };
+
+  const handleReportSubmit = () => {
+    if (!reportForm.type || !reportForm.description) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    Alert.alert(
+      'Report Submitted',
+      'Your incident report has been submitted successfully. Authorities will be notified.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            setShowReportModal(false);
+            setReportForm({ type: '', location: '', description: '', anonymous: false });
+          },
+        },
+      ]
+    );
   };
 
   const openSafetyMap = () => {
@@ -197,186 +270,80 @@ export default function SafetyScreen() {
               </View>
             </View>
 
-            <TouchableOpacity style={styles.reportButton} onPress={reportIncident}>
-              <BlurView intensity={60} tint="light" style={styles.reportButtonBlur}>
-                <Plus size={20} color="#FFFFFF" />
-                <Text style={styles.reportButtonText}>Report</Text>
+            <TouchableOpacity style={styles.mapButton} onPress={openSafetyMap}>
+              <BlurView intensity={60} tint="light" style={styles.mapButtonBlur}>
+                <MapPin size={20} color="#FFFFFF" />
+                <Text style={styles.mapButtonText}>Map</Text>
               </BlurView>
             </TouchableOpacity>
           </BlurView>
 
-          {/* Safety Map Button - Moved to top for prominence */}
-          <TouchableOpacity style={styles.mapButton} onPress={openSafetyMap}>
-            <BlurView intensity={90} tint="light" style={styles.mapButtonBlur}>
-              <LinearGradient
-                colors={['rgba(255, 107, 107, 0.9)', 'rgba(255, 140, 140, 0.8)']}
-                style={styles.mapButtonGradient}
-              >
-                <MapPin size={28} color="#FFFFFF" />
-                <View style={styles.mapButtonTextContainer}>
-                  <Text style={styles.mapButtonTitle}>Interactive Safety Map</Text>
-                  <Text style={styles.mapButtonSubtitle}>View danger zones & heatmap</Text>
-                </View>
-                <View style={styles.mapButtonBadge}>
-                  <Text style={styles.mapButtonBadgeText}>NEW</Text>
-                </View>
-              </LinearGradient>
-            </BlurView>
-          </TouchableOpacity>
-
-          {/* Safety Status */}
-          <View style={styles.statusContainer}>
-            <BlurView intensity={70} tint="light" style={styles.statusCard}>
-              <LinearGradient
-                colors={['rgba(50, 205, 50, 0.8)', 'rgba(144, 238, 144, 0.6)']}
-                style={styles.statusGradient}
-              >
-                <CheckCircle size={24} color="#FFFFFF" />
-                <View style={styles.statusTextContainer}>
-                  <Text style={styles.statusTitle}>You're in a Safe Area</Text>
-                  <Text style={styles.statusLocation}>Kandy City Center</Text>
-                </View>
-              </LinearGradient>
-            </BlurView>
-          </View>
-
-          {/* Emergency Contacts */}
+          {/* Real-time Safety Alerts */}
           <View style={styles.section}>
             <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+              <Text style={styles.sectionTitle}>🚨 Real-time Safety Alerts</Text>
             </BlurView>
             
-            <View style={styles.emergencyGrid}>
-              {emergencyContacts.map((contact, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={styles.emergencyCard}
-                  onPress={() => callEmergency(contact.number, contact.name)}
-                >
-                  <BlurView intensity={70} tint="light" style={styles.emergencyCardBlur}>
-                    <View style={styles.emergencyIcon}>
-                      <contact.icon size={24} color="#FF6B6B" />
-                    </View>
-                    <Text style={styles.emergencyName}>{contact.name}</Text>
-                    <Text style={styles.emergencyNumber}>{contact.number}</Text>
-                  </BlurView>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-
-          {/* Alert Filters */}
-          <View style={styles.section}>
-            <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Safety Alerts</Text>
-            </BlurView>
-            
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.filterContainer}
-            >
-              {filters.map((filter) => (
-                <TouchableOpacity
-                  key={filter.key}
-                  style={styles.filterButton}
-                  onPress={() => setSelectedFilter(filter.key)}
-                >
-                  <BlurView 
-                    intensity={selectedFilter === filter.key ? 80 : 60} 
-                    tint={selectedFilter === filter.key ? "light" : "dark"} 
-                    style={styles.filterButtonBlur}
+            <Animated.View style={[styles.alertsContainer, { opacity: alertsAnim }]}>
+              {safetyAlerts.map((alert, index) => {
+                const IconComponent = getAlertIcon(alert.category);
+                const slideAnim = slideAnims[index] || new Animated.Value(0);
+                
+                return (
+                  <Animated.View
+                    key={alert.id}
+                    style={[
+                      styles.alertCard,
+                      {
+                        transform: [{ translateY: slideAnim }],
+                      },
+                    ]}
                   >
-                    <Text
-                      style={[
-                        styles.filterText,
-                        selectedFilter === filter.key && styles.filterTextActive,
-                      ]}
-                    >
-                      {filter.label}
-                    </Text>
-                    <View
-                      style={[
-                        styles.filterBadge,
-                        selectedFilter === filter.key && styles.filterBadgeActive,
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.filterBadgeText,
-                          selectedFilter === filter.key &&
-                            styles.filterBadgeTextActive,
+                    <BlurView intensity={70} tint="light" style={styles.alertCardBlur}>
+                      <LinearGradient
+                        colors={[
+                          `${getAlertColor(alert.type)}20`,
+                          `${getAlertColor(alert.type)}10`,
                         ]}
+                        style={styles.alertGradient}
                       >
-                        {filter.count}
-                      </Text>
-                    </View>
-                  </BlurView>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
-
-          {/* Safety Alerts List */}
-          <View style={styles.alertsList}>
-            {filteredAlerts.map((alert) => {
-              const IconComponent = getTypeIcon(alert.type);
-              return (
-                <TouchableOpacity key={alert.id} style={styles.alertCard}>
-                  <BlurView intensity={70} tint="light" style={styles.alertCardBlur}>
-                    <View style={styles.alertHeader}>
-                      <View
-                        style={[
-                          styles.alertIcon,
-                          { backgroundColor: getSeverityColor(alert.severity) },
-                        ]}
-                      >
-                        <IconComponent size={20} color="#FFFFFF" />
-                      </View>
-                      <View style={styles.alertInfo}>
-                        <Text style={styles.alertTitle}>{alert.title}</Text>
-                        <View style={styles.alertMeta}>
-                          <MapPin size={12} color="#333" />
-                          <Text style={styles.alertLocation}>{alert.location}</Text>
-                        </View>
-                      </View>
-                      <View style={styles.alertTime}>
-                        <Clock size={12} color="#333" />
-                        <Text style={styles.alertTimeText}>{alert.time}</Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.alertDescription}>{alert.description}</Text>
-
-                    <View style={styles.alertFooter}>
-                      <View style={styles.alertStats}>
-                        <View style={styles.statItem}>
-                          <Users size={14} color="#333" />
-                          <Text style={styles.statText}>{alert.reports} reports</Text>
-                        </View>
-                        {alert.verified && (
-                          <View style={styles.verifiedBadge}>
-                            <CheckCircle size={12} color="#32CD32" />
-                            <Text style={styles.verifiedText}>Verified</Text>
+                        <View style={styles.alertHeader}>
+                          <View
+                            style={[
+                              styles.alertIcon,
+                              { backgroundColor: getAlertColor(alert.type) },
+                            ]}
+                          >
+                            <IconComponent size={20} color="#FFFFFF" />
                           </View>
-                        )}
-                      </View>
-
-                      <TouchableOpacity style={styles.alertAction}>
-                        <MessageCircle size={16} color="#20B2AA" />
-                        <Text style={styles.alertActionText}>Discuss</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </BlurView>
-                </TouchableOpacity>
-              );
-            })}
+                          <View style={styles.alertInfo}>
+                            <Text style={styles.alertTitle}>{alert.title}</Text>
+                            <View style={styles.alertMeta}>
+                              <MapPin size={12} color="#333" />
+                              <Text style={styles.alertLocation}>{alert.location}</Text>
+                              {alert.distance && (
+                                <Text style={styles.alertDistance}>• {alert.distance}</Text>
+                              )}
+                            </View>
+                          </View>
+                          <View style={styles.alertTime}>
+                            <Clock size={12} color="#333" />
+                            <Text style={styles.alertTimeText}>{alert.time}</Text>
+                          </View>
+                        </View>
+                        <Text style={styles.alertDescription}>{alert.description}</Text>
+                      </LinearGradient>
+                    </BlurView>
+                  </Animated.View>
+                );
+              })}
+            </Animated.View>
           </View>
 
           {/* Safety Tips */}
           <View style={styles.section}>
             <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Safety Tips</Text>
+              <Text style={styles.sectionTitle}>💡 Safety Tips</Text>
             </BlurView>
             
             <BlurView intensity={70} tint="light" style={styles.tipsContainer}>
@@ -399,6 +366,186 @@ export default function SafetyScreen() {
             </BlurView>
           </View>
         </ScrollView>
+
+        {/* Floating SOS Button */}
+        <TouchableOpacity
+          style={styles.sosButton}
+          onPress={() => setShowSOSPanel(true)}
+        >
+          <Animated.View style={[styles.sosButtonInner, { transform: [{ scale: sosAnim }] }]}>
+            <BlurView intensity={80} tint="light" style={styles.sosBlur}>
+              <LinearGradient
+                colors={['#FF6B6B', '#FF4444']}
+                style={styles.sosGradient}
+              >
+                <Text style={styles.sosText}>SOS</Text>
+              </LinearGradient>
+            </BlurView>
+          </Animated.View>
+        </TouchableOpacity>
+
+        {/* Floating Report Button */}
+        <TouchableOpacity
+          style={styles.reportButton}
+          onPress={() => setShowReportModal(true)}
+        >
+          <BlurView intensity={80} tint="dark" style={styles.reportBlur}>
+            <Plus size={24} color="#FFFFFF" />
+          </BlurView>
+        </TouchableOpacity>
+
+        {/* Emergency Panel Modal */}
+        <Modal
+          visible={showSOSPanel}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowSOSPanel(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <BlurView intensity={90} tint="dark" style={styles.emergencyPanel}>
+              <View style={styles.emergencyHeader}>
+                <Text style={styles.emergencyTitle}>🚨 EMERGENCY PANEL</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowSOSPanel(false)}
+                >
+                  <X size={24} color="#FFFFFF" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.emergencyGrid}>
+                {emergencyContacts.map((contact, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.emergencyCard}
+                    onPress={() => handleEmergencyCall(contact)}
+                  >
+                    <BlurView intensity={70} tint="light" style={styles.emergencyCardBlur}>
+                      <View style={[styles.emergencyIcon, { backgroundColor: contact.color }]}>
+                        <contact.icon size={24} color="#FFFFFF" />
+                      </View>
+                      <Text style={styles.emergencyName}>{contact.name}</Text>
+                      <Text style={styles.emergencyNumber}>{contact.number}</Text>
+                    </BlurView>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity style={styles.shareLocationButton} onPress={handleShareLocation}>
+                <BlurView intensity={70} tint="light" style={styles.shareLocationBlur}>
+                  <Share size={20} color="#20B2AA" />
+                  <Text style={styles.shareLocationText}>Share My Location</Text>
+                </BlurView>
+              </TouchableOpacity>
+            </BlurView>
+          </View>
+        </Modal>
+
+        {/* Report Incident Modal */}
+        <Modal
+          visible={showReportModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowReportModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <BlurView intensity={90} tint="light" style={styles.reportModal}>
+              <View style={styles.reportHeader}>
+                <Text style={styles.reportTitle}>📝 Report Incident</Text>
+                <TouchableOpacity
+                  style={styles.closeButton}
+                  onPress={() => setShowReportModal(false)}
+                >
+                  <X size={24} color="#333" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.reportForm} showsVerticalScrollIndicator={false}>
+                {/* Incident Type */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Incident Type *</Text>
+                  <TouchableOpacity style={styles.dropdown}>
+                    <Text style={styles.dropdownText}>
+                      {reportForm.type || 'Select incident type'}
+                    </Text>
+                    <ChevronDown size={20} color="#666" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Location */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Location</Text>
+                  <View style={styles.locationInput}>
+                    <MapPin size={16} color="#666" />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Current location or specify"
+                      value={reportForm.location}
+                      onChangeText={(text) => setReportForm({ ...reportForm, location: text })}
+                    />
+                  </View>
+                </View>
+
+                {/* Description */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Description *</Text>
+                  <TextInput
+                    style={styles.textArea}
+                    placeholder="Describe the incident in detail..."
+                    multiline
+                    numberOfLines={4}
+                    value={reportForm.description}
+                    onChangeText={(text) => setReportForm({ ...reportForm, description: text })}
+                  />
+                </View>
+
+                {/* Attachments */}
+                <View style={styles.formGroup}>
+                  <Text style={styles.formLabel}>Attachments (Optional)</Text>
+                  <View style={styles.attachmentButtons}>
+                    <TouchableOpacity style={styles.attachmentButton}>
+                      <Camera size={20} color="#666" />
+                      <Text style={styles.attachmentText}>Photo</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.attachmentButton}>
+                      <Video size={20} color="#666" />
+                      <Text style={styles.attachmentText}>Video</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.attachmentButton}>
+                      <ImageIcon size={20} color="#666" />
+                      <Text style={styles.attachmentText}>Gallery</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Anonymous Toggle */}
+                <TouchableOpacity
+                  style={styles.anonymousToggle}
+                  onPress={() => setReportForm({ ...reportForm, anonymous: !reportForm.anonymous })}
+                >
+                  <View style={styles.toggleLeft}>
+                    <UserCheck size={20} color="#666" />
+                    <Text style={styles.toggleText}>Report Anonymously</Text>
+                  </View>
+                  <View style={[styles.toggle, reportForm.anonymous && styles.toggleActive]}>
+                    <View style={[styles.toggleThumb, reportForm.anonymous && styles.toggleThumbActive]} />
+                  </View>
+                </TouchableOpacity>
+
+                {/* Submit Button */}
+                <TouchableOpacity style={styles.submitButton} onPress={handleReportSubmit}>
+                  <LinearGradient
+                    colors={['#20B2AA', '#48D1CC']}
+                    style={styles.submitGradient}
+                  >
+                    <Send size={20} color="#FFFFFF" />
+                    <Text style={styles.submitText}>Submit Report</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </ScrollView>
+            </BlurView>
+          </View>
+        </Modal>
       </LinearGradient>
     </ImageBackground>
   );
@@ -449,111 +596,21 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  reportButton: {
+  mapButton: {
     borderRadius: 20,
     overflow: 'hidden',
   },
-  reportButtonBlur: {
+  mapButtonBlur: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  reportButtonText: {
+  mapButtonText: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
     marginLeft: 4,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  mapButton: {
-    margin: 20,
-    borderRadius: 20,
-    overflow: 'hidden',
-    elevation: 8,
-    shadowColor: '#FF6B6B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-  },
-  mapButtonBlur: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  mapButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 20,
-    position: 'relative',
-  },
-  mapButtonTextContainer: {
-    flex: 1,
-    marginLeft: 16,
-  },
-  mapButtonTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  mapButtonSubtitle: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Regular',
-    color: '#FFFFFF',
-    opacity: 0.9,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  mapButtonBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  mapButtonBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  statusContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
-  statusCard: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  statusGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  statusTextContainer: {
-    marginLeft: 12,
-    flex: 1,
-  },
-  statusTitle: {
-    fontSize: 16,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  statusLocation: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#FFFFFF',
-    opacity: 0.9,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
@@ -576,95 +633,23 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
-  emergencyGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  emergencyCard: {
-    width: (width - 60) / 2,
-    marginBottom: 12,
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  emergencyCardBlur: {
-    padding: 16,
-    alignItems: 'center',
-  },
-  emergencyIcon: {
-    width: 50,
-    height: 50,
-    backgroundColor: 'rgba(255, 245, 245, 0.8)',
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  emergencyName: {
-    fontSize: 12,
-    fontFamily: 'Poppins-SemiBold',
-    color: '#333',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  emergencyNumber: {
-    fontSize: 16,
-    fontFamily: 'Poppins-Bold',
-    color: '#FF6B6B',
-  },
-  filterContainer: {
-    marginBottom: 16,
-  },
-  filterButton: {
-    marginRight: 12,
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  filterButtonBlur: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  filterText: {
-    fontSize: 14,
-    fontFamily: 'Poppins-Medium',
-    color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
-  },
-  filterTextActive: {
-    color: '#333',
-    textShadowColor: 'transparent',
-  },
-  filterBadge: {
-    backgroundColor: 'rgba(224, 224, 224, 0.3)',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    marginLeft: 8,
-  },
-  filterBadgeActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-  },
-  filterBadgeText: {
-    fontSize: 10,
-    fontFamily: 'Poppins-Bold',
-    color: '#FFFFFF',
-  },
-  filterBadgeTextActive: {
-    color: '#333',
-  },
-  alertsList: {
-    paddingHorizontal: 20,
+  alertsContainer: {
+    gap: 12,
   },
   alertCard: {
-    marginBottom: 12,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  alertCardBlur: {
     borderRadius: 16,
     overflow: 'hidden',
   },
-  alertCardBlur: {
+  alertGradient: {
     padding: 16,
   },
   alertHeader: {
@@ -700,6 +685,12 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     opacity: 0.8,
   },
+  alertDistance: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+    color: '#20B2AA',
+    marginLeft: 4,
+  },
   alertTime: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -716,49 +707,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     color: '#333',
     lineHeight: 20,
-    marginBottom: 12,
     opacity: 0.9,
-  },
-  alertFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  alertStats: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  statText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Regular',
-    color: '#333',
-    marginLeft: 4,
-    opacity: 0.8,
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  verifiedText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Medium',
-    color: '#32CD32',
-    marginLeft: 4,
-  },
-  alertAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  alertActionText: {
-    fontSize: 12,
-    fontFamily: 'Poppins-Medium',
-    color: '#20B2AA',
-    marginLeft: 4,
   },
   tipsContainer: {
     borderRadius: 16,
@@ -779,5 +728,309 @@ const styles = StyleSheet.create({
     marginLeft: 12,
     flex: 1,
     opacity: 0.9,
+  },
+  sosButton: {
+    position: 'absolute',
+    bottom: 100,
+    right: 20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+  },
+  sosButtonInner: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
+    overflow: 'hidden',
+  },
+  sosBlur: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
+    overflow: 'hidden',
+  },
+  sosGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sosText: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  reportButton: {
+    position: 'absolute',
+    bottom: 200,
+    right: 20,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+  },
+  reportBlur: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  emergencyPanel: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    overflow: 'hidden',
+    maxHeight: height * 0.8,
+  },
+  emergencyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  emergencyTitle: {
+    fontSize: 20,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emergencyGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    padding: 20,
+    gap: 12,
+  },
+  emergencyCard: {
+    width: (width - 80) / 2,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  emergencyCardBlur: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  emergencyIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  emergencyName: {
+    fontSize: 12,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  emergencyNumber: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Bold',
+    color: '#FF6B6B',
+    textAlign: 'center',
+  },
+  shareLocationButton: {
+    margin: 20,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  shareLocationBlur: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  shareLocationText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#20B2AA',
+    marginLeft: 8,
+  },
+  reportModal: {
+    width: '100%',
+    maxWidth: 400,
+    maxHeight: height * 0.9,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  reportHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  reportTitle: {
+    fontSize: 20,
+    fontFamily: 'Poppins-Bold',
+    color: '#333',
+  },
+  reportForm: {
+    padding: 20,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 14,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  dropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  dropdownText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333',
+  },
+  locationInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333',
+    paddingVertical: 12,
+    marginLeft: 8,
+  },
+  textArea: {
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#333',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    textAlignVertical: 'top',
+  },
+  attachmentButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  attachmentButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  attachmentText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+    color: '#666',
+    marginLeft: 4,
+  },
+  anonymousToggle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  toggleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Medium',
+    color: '#333',
+    marginLeft: 8,
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleActive: {
+    backgroundColor: '#20B2AA',
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  toggleThumbActive: {
+    alignSelf: 'flex-end',
+  },
+  submitButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  submitGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  submitText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
+    marginLeft: 8,
   },
 });
