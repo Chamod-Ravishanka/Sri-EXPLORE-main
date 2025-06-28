@@ -21,20 +21,7 @@ import MapView, {
   Region 
 } from 'react-native-maps';
 import * as Location from 'expo-location';
-import {
-  ArrowLeft,
-  Navigation,
-  Search,
-  AlertTriangle,
-  Shield,
-  Droplets,
-  Zap,
-  Eye,
-  MapPin,
-  Layers,
-  Filter,
-  Target,
-} from 'lucide-react-native';
+import { ArrowLeft, Navigation, Search, TriangleAlert as AlertTriangle, Shield, Droplets, Zap, Eye, MapPin, Layers, Filter, Target } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
