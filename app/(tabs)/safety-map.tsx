@@ -9,6 +9,7 @@ import {
   TextInput,
   Animated,
   Platform,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,7 +22,7 @@ import MapView, {
   Region 
 } from 'react-native-maps';
 import * as Location from 'expo-location';
-import { ArrowLeft, Navigation, Search, TriangleAlert as AlertTriangle, Shield, Droplets, Zap, Eye, MapPin, Layers, Filter, Target } from 'lucide-react-native';
+import { ArrowLeft, Navigation, Search, TriangleAlert as AlertTriangle, Shield, Droplets, Zap, Eye, MapPin, Layers, Filter, Target, X, Clock, Users, CheckCircle } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +36,8 @@ interface DangerZone {
   description: string;
   reports: number;
   lastUpdated: string;
+  verified: boolean;
+  tips: string[];
 }
 
 interface HeatmapPoint {
@@ -47,6 +50,7 @@ export default function SafetyMapScreen() {
   const router = useRouter();
   const mapRef = useRef<MapView>(null);
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   const [userLocation, setUserLocation] = useState<Location.LocationObject | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +58,8 @@ export default function SafetyMapScreen() {
   const [selectedFilters, setSelectedFilters] = useState<string[]>(['all']);
   const [mapType, setMapType] = useState<'standard' | 'satellite' | 'hybrid'>('standard');
   const [showHeatmap, setShowHeatmap] = useState(true);
+  const [selectedZone, setSelectedZone] = useState<DangerZone | null>(null);
+  const [showZoneModal, setShowZoneModal] = useState(false);
 
   // Sri Lanka bounds
   const sriLankaBounds = {
@@ -63,7 +69,7 @@ export default function SafetyMapScreen() {
     longitudeDelta: 3.5,
   };
 
-  // Mock danger zones data (in production, this would come from your API)
+  // Enhanced danger zones data with more details
   const dangerZones: DangerZone[] = [
     {
       id: '1',
@@ -72,9 +78,15 @@ export default function SafetyMapScreen() {
       type: 'scam',
       severity: 'high',
       title: 'Tourist Scam Zone',
-      description: 'Fake taxi drivers and overcharging incidents',
+      description: 'Fake taxi drivers and overcharging incidents. Be cautious of unofficial transport services.',
       reports: 15,
       lastUpdated: '2 hours ago',
+      verified: true,
+      tips: [
+        'Always use official taxi services or ride-sharing apps',
+        'Verify meter is working before starting journey',
+        'Ask for estimated fare beforehand'
+      ]
     },
     {
       id: '2',
@@ -83,9 +95,15 @@ export default function SafetyMapScreen() {
       type: 'theft',
       severity: 'medium',
       title: 'Pickpocketing Area',
-      description: 'Increased pickpocketing in market areas',
+      description: 'Increased pickpocketing in market areas, especially during peak hours.',
       reports: 8,
       lastUpdated: '4 hours ago',
+      verified: true,
+      tips: [
+        'Keep valuables in front pockets or secure bags',
+        'Avoid displaying expensive items',
+        'Stay alert in crowded areas'
+      ]
     },
     {
       id: '3',
@@ -94,9 +112,15 @@ export default function SafetyMapScreen() {
       type: 'flood',
       severity: 'high',
       title: 'Flood Risk Zone',
-      description: 'Monsoon flooding expected',
+      description: 'Monsoon flooding expected. Roads may become impassable during heavy rains.',
       reports: 22,
       lastUpdated: '1 hour ago',
+      verified: true,
+      tips: [
+        'Monitor weather forecasts regularly',
+        'Avoid low-lying areas during monsoon',
+        'Have alternative routes planned'
+      ]
     },
     {
       id: '4',
@@ -105,9 +129,15 @@ export default function SafetyMapScreen() {
       type: 'danger',
       severity: 'medium',
       title: 'Road Construction',
-      description: 'Major road works causing delays',
+      description: 'Major road works causing delays and potential safety hazards.',
       reports: 12,
       lastUpdated: '3 hours ago',
+      verified: true,
+      tips: [
+        'Use alternative routes when possible',
+        'Drive slowly in construction zones',
+        'Follow traffic signs and signals'
+      ]
     },
     {
       id: '5',
@@ -116,18 +146,93 @@ export default function SafetyMapScreen() {
       type: 'fraud',
       severity: 'high',
       title: 'ATM Fraud Alert',
-      description: 'Card skimming devices reported',
+      description: 'Card skimming devices reported at several ATM locations in this area.',
       reports: 6,
       lastUpdated: '30 minutes ago',
+      verified: false,
+      tips: [
+        'Check ATM for suspicious devices',
+        'Cover PIN when entering',
+        'Use ATMs inside banks when possible'
+      ]
     },
+    // Additional zones for better heatmap visualization
+    {
+      id: '6',
+      latitude: 6.9344,
+      longitude: 79.8428,
+      type: 'scam',
+      severity: 'medium',
+      title: 'Gem Shop Scams',
+      description: 'Tourists targeted with fake gem deals and overpriced jewelry.',
+      reports: 9,
+      lastUpdated: '5 hours ago',
+      verified: true,
+      tips: [
+        'Research gem prices beforehand',
+        'Only buy from certified dealers',
+        'Be wary of "special deals" for tourists'
+      ]
+    },
+    {
+      id: '7',
+      latitude: 7.2558,
+      longitude: 80.5877,
+      type: 'theft',
+      severity: 'low',
+      title: 'Hotel Area Theft',
+      description: 'Minor theft incidents reported near budget accommodations.',
+      reports: 3,
+      lastUpdated: '1 day ago',
+      verified: false,
+      tips: [
+        'Use hotel safes for valuables',
+        'Lock rooms when leaving',
+        'Don\'t leave items unattended'
+      ]
+    }
   ];
 
-  // Generate heatmap data
-  const heatmapData: HeatmapPoint[] = dangerZones.map(zone => ({
-    latitude: zone.latitude,
-    longitude: zone.longitude,
-    weight: zone.severity === 'high' ? 1 : zone.severity === 'medium' ? 0.6 : 0.3,
-  }));
+  // Enhanced heatmap data with better weight distribution
+  const generateHeatmapData = (): HeatmapPoint[] => {
+    const basePoints = dangerZones.map(zone => ({
+      latitude: zone.latitude,
+      longitude: zone.longitude,
+      weight: zone.severity === 'high' ? 1.0 : zone.severity === 'medium' ? 0.6 : 0.3,
+    }));
+
+    // Add surrounding points for better heatmap visualization
+    const enhancedPoints: HeatmapPoint[] = [];
+    
+    basePoints.forEach(point => {
+      enhancedPoints.push(point);
+      
+      // Add surrounding points with lower weights for gradient effect
+      const radius = 0.01; // Approximately 1km
+      const surroundingPoints = [
+        { lat: point.latitude + radius, lng: point.longitude, weight: point.weight * 0.3 },
+        { lat: point.latitude - radius, lng: point.longitude, weight: point.weight * 0.3 },
+        { lat: point.latitude, lng: point.longitude + radius, weight: point.weight * 0.3 },
+        { lat: point.latitude, lng: point.longitude - radius, weight: point.weight * 0.3 },
+        { lat: point.latitude + radius * 0.5, lng: point.longitude + radius * 0.5, weight: point.weight * 0.5 },
+        { lat: point.latitude - radius * 0.5, lng: point.longitude - radius * 0.5, weight: point.weight * 0.5 },
+        { lat: point.latitude + radius * 0.5, lng: point.longitude - radius * 0.5, weight: point.weight * 0.5 },
+        { lat: point.latitude - radius * 0.5, lng: point.longitude + radius * 0.5, weight: point.weight * 0.5 },
+      ];
+
+      surroundingPoints.forEach(sp => {
+        enhancedPoints.push({
+          latitude: sp.lat,
+          longitude: sp.lng,
+          weight: sp.weight
+        });
+      });
+    });
+
+    return enhancedPoints;
+  };
+
+  const heatmapData = generateHeatmapData();
 
   const filterOptions = [
     { key: 'all', label: 'All Zones', icon: Eye, color: '#666' },
@@ -141,23 +246,32 @@ export default function SafetyMapScreen() {
   useEffect(() => {
     getCurrentLocation();
     startPulseAnimation();
+    startFadeAnimation();
   }, []);
 
   const startPulseAnimation = () => {
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
-          toValue: 1.3,
-          duration: 1000,
+          toValue: 1.4,
+          duration: 1500,
           useNativeDriver: true,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
-          duration: 1000,
+          duration: 1500,
           useNativeDriver: true,
         }),
       ])
     ).start();
+  };
+
+  const startFadeAnimation = () => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 1000,
+      useNativeDriver: true,
+    }).start();
   };
 
   const getCurrentLocation = async () => {
@@ -248,6 +362,15 @@ export default function SafetyMapScreen() {
     }
   };
 
+  const handleMarkerPress = (zone: DangerZone) => {
+    setSelectedZone(zone);
+    setShowZoneModal(true);
+  };
+
+  const handleBackPress = () => {
+    router.push('/(tabs)/safety');
+  };
+
   return (
     <View style={styles.container}>
       {/* Map */}
@@ -262,21 +385,28 @@ export default function SafetyMapScreen() {
         showsCompass={false}
         toolbarEnabled={false}
       >
-        {/* Heatmap */}
+        {/* Enhanced Heatmap */}
         {showHeatmap && (
           <Heatmap
             points={heatmapData}
-            radius={50}
-            opacity={0.7}
+            radius={60}
+            opacity={0.8}
             gradient={{
-              colors: ['rgba(0,255,0,0)', 'rgba(255,255,0,1)', 'rgba(255,0,0,1)'],
-              startPoints: [0.1, 0.5, 1.0],
-              colorMapSize: 256,
+              colors: [
+                'rgba(0,255,0,0)',
+                'rgba(0,255,0,0.2)',
+                'rgba(255,255,0,0.5)',
+                'rgba(255,165,0,0.7)',
+                'rgba(255,0,0,0.9)',
+                'rgba(139,0,0,1)'
+              ],
+              startPoints: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
+              colorMapSize: 512,
             }}
           />
         )}
 
-        {/* User Location with Pulse Effect */}
+        {/* User Location with Enhanced Pulse Effect */}
         {userLocation && (
           <>
             <Marker
@@ -286,8 +416,10 @@ export default function SafetyMapScreen() {
               }}
               anchor={{ x: 0.5, y: 0.5 }}
             >
-              <Animated.View style={[styles.userLocationPulse, { transform: [{ scale: pulseAnim }] }]}>
-                <View style={styles.userLocationDot} />
+              <Animated.View style={[styles.userLocationContainer, { opacity: fadeAnim }]}>
+                <Animated.View style={[styles.userLocationPulse, { transform: [{ scale: pulseAnim }] }]}>
+                  <View style={styles.userLocationDot} />
+                </Animated.View>
               </Animated.View>
             </Marker>
             
@@ -296,32 +428,34 @@ export default function SafetyMapScreen() {
                 latitude: userLocation.coords.latitude,
                 longitude: userLocation.coords.longitude,
               }}
-              radius={100}
-              fillColor="rgba(32, 178, 170, 0.2)"
-              strokeColor="rgba(32, 178, 170, 0.8)"
+              radius={200}
+              fillColor="rgba(32, 178, 170, 0.15)"
+              strokeColor="rgba(32, 178, 170, 0.6)"
               strokeWidth={2}
             />
           </>
         )}
 
-        {/* Danger Zone Markers */}
+        {/* Enhanced Danger Zone Markers */}
         {filteredZones.map((zone) => {
           const IconComponent = getZoneIcon(zone.type);
           return (
             <Marker
               key={zone.id}
               coordinate={{ latitude: zone.latitude, longitude: zone.longitude }}
-              onPress={() => {
-                Alert.alert(
-                  zone.title,
-                  `${zone.description}\n\nReports: ${zone.reports}\nLast updated: ${zone.lastUpdated}`,
-                  [{ text: 'OK' }]
-                );
-              }}
+              onPress={() => handleMarkerPress(zone)}
             >
-              <View style={[styles.dangerMarker, { backgroundColor: getZoneColor(zone.severity) }]}>
-                <IconComponent size={16} color="#FFFFFF" />
-              </View>
+              <Animated.View style={[styles.dangerMarkerContainer, { opacity: fadeAnim }]}>
+                <View style={[styles.dangerMarker, { backgroundColor: getZoneColor(zone.severity) }]}>
+                  <IconComponent size={18} color="#FFFFFF" />
+                  {zone.verified && (
+                    <View style={styles.verifiedBadge}>
+                      <CheckCircle size={10} color="#32CD32" />
+                    </View>
+                  )}
+                </View>
+                <View style={[styles.markerShadow, { backgroundColor: getZoneColor(zone.severity) }]} />
+              </Animated.View>
             </Marker>
           );
         })}
@@ -329,7 +463,7 @@ export default function SafetyMapScreen() {
 
       {/* Header */}
       <BlurView intensity={80} tint="dark" style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
           <ArrowLeft size={24} color="#FFFFFF" />
         </TouchableOpacity>
         
@@ -357,7 +491,7 @@ export default function SafetyMapScreen() {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Text style={styles.clearButton}>✕</Text>
+              <X size={18} color="#666" />
             </TouchableOpacity>
           )}
         </View>
@@ -442,24 +576,103 @@ export default function SafetyMapScreen() {
         ))}
       </View>
 
-      {/* Legend */}
+      {/* Enhanced Legend */}
       <BlurView intensity={70} tint="light" style={styles.legend}>
-        <Text style={styles.legendTitle}>Danger Levels</Text>
+        <Text style={styles.legendTitle}>Risk Levels</Text>
         <View style={styles.legendItems}>
           <View style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: '#FF6B6B' }]} />
-            <Text style={styles.legendText}>High Risk</Text>
+            <Text style={styles.legendText}>High</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: '#F39C12' }]} />
-            <Text style={styles.legendText}>Medium Risk</Text>
+            <Text style={styles.legendText}>Medium</Text>
           </View>
           <View style={styles.legendItem}>
             <View style={[styles.legendColor, { backgroundColor: '#32CD32' }]} />
-            <Text style={styles.legendText}>Low Risk</Text>
+            <Text style={styles.legendText}>Low</Text>
           </View>
         </View>
       </BlurView>
+
+      {/* Enhanced Glassy Zone Info Modal */}
+      <Modal
+        visible={showZoneModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowZoneModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <BlurView intensity={90} tint="dark" style={styles.modalContainer}>
+            {selectedZone && (
+              <>
+                <View style={styles.modalHeader}>
+                  <View style={styles.modalTitleContainer}>
+                    <View style={[styles.modalIcon, { backgroundColor: getZoneColor(selectedZone.severity) }]}>
+                      {React.createElement(getZoneIcon(selectedZone.type), {
+                        size: 24,
+                        color: '#FFFFFF',
+                      })}
+                    </View>
+                    <View style={styles.modalTitleText}>
+                      <Text style={styles.modalTitle}>{selectedZone.title}</Text>
+                      <Text style={styles.modalSubtitle}>
+                        {selectedZone.type.charAt(0).toUpperCase() + selectedZone.type.slice(1)} • {selectedZone.severity.charAt(0).toUpperCase() + selectedZone.severity.slice(1)} Risk
+                      </Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.modalCloseButton}
+                    onPress={() => setShowZoneModal(false)}
+                  >
+                    <X size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalContent}>
+                  <Text style={styles.modalDescription}>{selectedZone.description}</Text>
+                  
+                  <View style={styles.modalStats}>
+                    <View style={styles.modalStat}>
+                      <Users size={16} color="#FFFFFF" />
+                      <Text style={styles.modalStatText}>{selectedZone.reports} reports</Text>
+                    </View>
+                    <View style={styles.modalStat}>
+                      <Clock size={16} color="#FFFFFF" />
+                      <Text style={styles.modalStatText}>{selectedZone.lastUpdated}</Text>
+                    </View>
+                    {selectedZone.verified && (
+                      <View style={styles.modalStat}>
+                        <CheckCircle size={16} color="#32CD32" />
+                        <Text style={styles.modalStatVerified}>Verified</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  <View style={styles.modalTips}>
+                    <Text style={styles.modalTipsTitle}>Safety Tips:</Text>
+                    {selectedZone.tips.map((tip, index) => (
+                      <Text key={index} style={styles.modalTip}>• {tip}</Text>
+                    ))}
+                  </View>
+                </View>
+
+                <TouchableOpacity 
+                  style={styles.modalButton}
+                  onPress={() => setShowZoneModal(false)}
+                >
+                  <LinearGradient
+                    colors={['rgba(32, 178, 170, 0.8)', 'rgba(72, 209, 204, 0.8)']}
+                    style={styles.modalButtonGradient}
+                  >
+                    <Text style={styles.modalButtonText}>Got it</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </>
+            )}
+          </BlurView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -528,11 +741,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     color: '#333',
     marginLeft: 12,
-  },
-  clearButton: {
-    fontSize: 18,
-    color: '#666',
-    paddingHorizontal: 8,
   },
   filterToggle: {
     position: 'absolute',
@@ -667,34 +875,188 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-Regular',
     color: '#333',
   },
+  userLocationContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   userLocationPulse: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(32, 178, 170, 0.3)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   userLocationDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#20B2AA',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-  },
-  dangerMarker: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 3,
     borderColor: '#FFFFFF',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
+  },
+  dangerMarkerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dangerMarker: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    position: 'relative',
+  },
+  verifiedBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    width: 16,
+    height: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  markerShadow: {
+    position: 'absolute',
+    bottom: -8,
+    width: 20,
+    height: 8,
+    borderRadius: 10,
+    opacity: 0.3,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  modalIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitleText: {
+    flex: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+    opacity: 0.8,
+  },
+  modalCloseButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalDescription: {
+    fontSize: 16,
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+    lineHeight: 24,
+    marginBottom: 16,
+    opacity: 0.9,
+  },
+  modalStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  modalStat: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  modalStatText: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+    marginLeft: 4,
+    opacity: 0.8,
+  },
+  modalStatVerified: {
+    fontSize: 12,
+    fontFamily: 'Poppins-Medium',
+    color: '#32CD32',
+    marginLeft: 4,
+  },
+  modalTips: {
+    marginBottom: 20,
+  },
+  modalTipsTitle: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  modalTip: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  modalButton: {
+    margin: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  modalButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontFamily: 'Poppins-SemiBold',
+    color: '#FFFFFF',
   },
 });
