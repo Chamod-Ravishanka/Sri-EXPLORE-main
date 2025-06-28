@@ -7,8 +7,10 @@ import {
   ScrollView,
   Alert,
   Dimensions,
+  ImageBackground,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { BlurView } from 'expo-blur';
 import {
   Shield,
   TriangleAlert as AlertTriangle,
@@ -167,204 +169,248 @@ export default function SafetyScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header */}
-      <LinearGradient colors={['#FF6B6B', '#FF8E8E']} style={styles.header}>
-        <View style={styles.headerContent}>
-          <Shield size={32} color="#FFFFFF" />
-          <View style={styles.headerText}>
-            <Text style={styles.headerTitle}>Sri-SafeSpot</Text>
-            <Text style={styles.headerSubtitle}>Stay safe, stay informed</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.reportButton} onPress={reportIncident}>
-          <Plus size={24} color="#FFFFFF" />
-          <Text style={styles.reportButtonText}>Report</Text>
-        </TouchableOpacity>
-      </LinearGradient>
-
-      {/* Safety Status */}
-      <View style={styles.statusContainer}>
-        <LinearGradient
-          colors={['#32CD32', '#90EE90']}
-          style={styles.statusCard}
-        >
-          <CheckCircle size={24} color="#FFFFFF" />
-          <Text style={styles.statusTitle}>You're in a Safe Area</Text>
-          <Text style={styles.statusLocation}>Kandy City Center</Text>
-        </LinearGradient>
-      </View>
-
-      {/* Emergency Contacts */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Emergency Contacts</Text>
-        <View style={styles.emergencyGrid}>
-          {emergencyContacts.map((contact, index) => (
-            <TouchableOpacity
-              key={index}
-              style={styles.emergencyCard}
-              onPress={() => callEmergency(contact.number, contact.name)}
-            >
-              <View style={styles.emergencyIcon}>
-                <contact.icon size={24} color="#FF6B6B" />
+    <ImageBackground
+      source={{
+        uri: 'https://images.pexels.com/photos/2422915/pexels-photo-2422915.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2'
+      }}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    >
+      <LinearGradient
+        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.6)', 'rgba(0,0,0,0.4)']}
+        style={styles.overlay}
+      >
+        <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <BlurView intensity={80} tint="dark" style={styles.header}>
+            <View style={styles.headerContent}>
+              <Shield size={32} color="#FFFFFF" />
+              <View style={styles.headerText}>
+                <Text style={styles.headerTitle}>Sri-SafeSpot</Text>
+                <Text style={styles.headerSubtitle}>Stay safe, stay informed</Text>
               </View>
-              <Text style={styles.emergencyName}>{contact.name}</Text>
-              <Text style={styles.emergencyNumber}>{contact.number}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+            </View>
 
-      {/* Alert Filters */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Safety Alerts</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterContainer}
-        >
-          {filters.map((filter) => (
-            <TouchableOpacity
-              key={filter.key}
-              style={[
-                styles.filterButton,
-                selectedFilter === filter.key && styles.filterButtonActive,
-              ]}
-              onPress={() => setSelectedFilter(filter.key)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  selectedFilter === filter.key && styles.filterTextActive,
-                ]}
+            <TouchableOpacity style={styles.reportButton} onPress={reportIncident}>
+              <BlurView intensity={60} tint="light" style={styles.reportButtonBlur}>
+                <Plus size={20} color="#FFFFFF" />
+                <Text style={styles.reportButtonText}>Report</Text>
+              </BlurView>
+            </TouchableOpacity>
+          </BlurView>
+
+          {/* Safety Status */}
+          <View style={styles.statusContainer}>
+            <BlurView intensity={70} tint="light" style={styles.statusCard}>
+              <LinearGradient
+                colors={['rgba(50, 205, 50, 0.8)', 'rgba(144, 238, 144, 0.6)']}
+                style={styles.statusGradient}
               >
-                {filter.label}
-              </Text>
-              <View
-                style={[
-                  styles.filterBadge,
-                  selectedFilter === filter.key && styles.filterBadgeActive,
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.filterBadgeText,
-                    selectedFilter === filter.key &&
-                      styles.filterBadgeTextActive,
-                  ]}
+                <CheckCircle size={24} color="#FFFFFF" />
+                <View style={styles.statusTextContainer}>
+                  <Text style={styles.statusTitle}>You're in a Safe Area</Text>
+                  <Text style={styles.statusLocation}>Kandy City Center</Text>
+                </View>
+              </LinearGradient>
+            </BlurView>
+          </View>
+
+          {/* Emergency Contacts */}
+          <View style={styles.section}>
+            <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Emergency Contacts</Text>
+            </BlurView>
+            
+            <View style={styles.emergencyGrid}>
+              {emergencyContacts.map((contact, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={styles.emergencyCard}
+                  onPress={() => callEmergency(contact.number, contact.name)}
                 >
-                  {filter.count}
+                  <BlurView intensity={70} tint="light" style={styles.emergencyCardBlur}>
+                    <View style={styles.emergencyIcon}>
+                      <contact.icon size={24} color="#FF6B6B" />
+                    </View>
+                    <Text style={styles.emergencyName}>{contact.name}</Text>
+                    <Text style={styles.emergencyNumber}>{contact.number}</Text>
+                  </BlurView>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {/* Alert Filters */}
+          <View style={styles.section}>
+            <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Safety Alerts</Text>
+            </BlurView>
+            
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.filterContainer}
+            >
+              {filters.map((filter) => (
+                <TouchableOpacity
+                  key={filter.key}
+                  style={styles.filterButton}
+                  onPress={() => setSelectedFilter(filter.key)}
+                >
+                  <BlurView 
+                    intensity={selectedFilter === filter.key ? 80 : 60} 
+                    tint={selectedFilter === filter.key ? "light" : "dark"} 
+                    style={styles.filterButtonBlur}
+                  >
+                    <Text
+                      style={[
+                        styles.filterText,
+                        selectedFilter === filter.key && styles.filterTextActive,
+                      ]}
+                    >
+                      {filter.label}
+                    </Text>
+                    <View
+                      style={[
+                        styles.filterBadge,
+                        selectedFilter === filter.key && styles.filterBadgeActive,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.filterBadgeText,
+                          selectedFilter === filter.key &&
+                            styles.filterBadgeTextActive,
+                        ]}
+                      >
+                        {filter.count}
+                      </Text>
+                    </View>
+                  </BlurView>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Safety Alerts List */}
+          <View style={styles.alertsList}>
+            {filteredAlerts.map((alert) => {
+              const IconComponent = getTypeIcon(alert.type);
+              return (
+                <TouchableOpacity key={alert.id} style={styles.alertCard}>
+                  <BlurView intensity={70} tint="light" style={styles.alertCardBlur}>
+                    <View style={styles.alertHeader}>
+                      <View
+                        style={[
+                          styles.alertIcon,
+                          { backgroundColor: getSeverityColor(alert.severity) },
+                        ]}
+                      >
+                        <IconComponent size={20} color="#FFFFFF" />
+                      </View>
+                      <View style={styles.alertInfo}>
+                        <Text style={styles.alertTitle}>{alert.title}</Text>
+                        <View style={styles.alertMeta}>
+                          <MapPin size={12} color="#333" />
+                          <Text style={styles.alertLocation}>{alert.location}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.alertTime}>
+                        <Clock size={12} color="#333" />
+                        <Text style={styles.alertTimeText}>{alert.time}</Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.alertDescription}>{alert.description}</Text>
+
+                    <View style={styles.alertFooter}>
+                      <View style={styles.alertStats}>
+                        <View style={styles.statItem}>
+                          <Users size={14} color="#333" />
+                          <Text style={styles.statText}>{alert.reports} reports</Text>
+                        </View>
+                        {alert.verified && (
+                          <View style={styles.verifiedBadge}>
+                            <CheckCircle size={12} color="#32CD32" />
+                            <Text style={styles.verifiedText}>Verified</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <TouchableOpacity style={styles.alertAction}>
+                        <MessageCircle size={16} color="#20B2AA" />
+                        <Text style={styles.alertActionText}>Discuss</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </BlurView>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Map View Button */}
+          <TouchableOpacity style={styles.mapButton}>
+            <BlurView intensity={80} tint="light" style={styles.mapButtonBlur}>
+              <LinearGradient
+                colors={['rgba(32, 178, 170, 0.8)', 'rgba(72, 209, 204, 0.8)']}
+                style={styles.mapButtonGradient}
+              >
+                <MapPin size={24} color="#FFFFFF" />
+                <Text style={styles.mapButtonText}>View Safety Map</Text>
+              </LinearGradient>
+            </BlurView>
+          </TouchableOpacity>
+
+          {/* Safety Tips */}
+          <View style={styles.section}>
+            <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Safety Tips</Text>
+            </BlurView>
+            
+            <BlurView intensity={70} tint="light" style={styles.tipsContainer}>
+              <View style={styles.tipItem}>
+                <Shield size={16} color="#20B2AA" />
+                <Text style={styles.tipText}>
+                  Always keep copies of important documents
                 </Text>
               </View>
-            </TouchableOpacity>
-          ))}
+              <View style={styles.tipItem}>
+                <Eye size={16} color="#20B2AA" />
+                <Text style={styles.tipText}>Stay aware of your surroundings</Text>
+              </View>
+              <View style={styles.tipItem}>
+                <Phone size={16} color="#20B2AA" />
+                <Text style={styles.tipText}>
+                  Keep emergency contacts readily available
+                </Text>
+              </View>
+            </BlurView>
+          </View>
         </ScrollView>
-      </View>
-
-      {/* Safety Alerts List */}
-      <View style={styles.alertsList}>
-        {filteredAlerts.map((alert) => {
-          const IconComponent = getTypeIcon(alert.type);
-          return (
-            <TouchableOpacity key={alert.id} style={styles.alertCard}>
-              <View style={styles.alertHeader}>
-                <View
-                  style={[
-                    styles.alertIcon,
-                    { backgroundColor: getSeverityColor(alert.severity) },
-                  ]}
-                >
-                  <IconComponent size={20} color="#FFFFFF" />
-                </View>
-                <View style={styles.alertInfo}>
-                  <Text style={styles.alertTitle}>{alert.title}</Text>
-                  <View style={styles.alertMeta}>
-                    <MapPin size={12} color="#666" />
-                    <Text style={styles.alertLocation}>{alert.location}</Text>
-                  </View>
-                </View>
-                <View style={styles.alertTime}>
-                  <Clock size={12} color="#666" />
-                  <Text style={styles.alertTimeText}>{alert.time}</Text>
-                </View>
-              </View>
-
-              <Text style={styles.alertDescription}>{alert.description}</Text>
-
-              <View style={styles.alertFooter}>
-                <View style={styles.alertStats}>
-                  <View style={styles.statItem}>
-                    <Users size={14} color="#666" />
-                    <Text style={styles.statText}>{alert.reports} reports</Text>
-                  </View>
-                  {alert.verified && (
-                    <View style={styles.verifiedBadge}>
-                      <CheckCircle size={12} color="#32CD32" />
-                      <Text style={styles.verifiedText}>Verified</Text>
-                    </View>
-                  )}
-                </View>
-
-                <TouchableOpacity style={styles.alertAction}>
-                  <MessageCircle size={16} color="#20B2AA" />
-                  <Text style={styles.alertActionText}>Discuss</Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          );
-        })}
-      </View>
-
-      {/* Map View Button */}
-      <TouchableOpacity style={styles.mapButton}>
-        <LinearGradient
-          colors={['#20B2AA', '#48D1CC']}
-          style={styles.mapButtonGradient}
-        >
-          <MapPin size={24} color="#FFFFFF" />
-          <Text style={styles.mapButtonText}>View Safety Map</Text>
-        </LinearGradient>
-      </TouchableOpacity>
-
-      {/* Safety Tips */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Safety Tips</Text>
-        <View style={styles.tipsContainer}>
-          <View style={styles.tipItem}>
-            <Shield size={16} color="#20B2AA" />
-            <Text style={styles.tipText}>
-              Always keep copies of important documents
-            </Text>
-          </View>
-          <View style={styles.tipItem}>
-            <Eye size={16} color="#20B2AA" />
-            <Text style={styles.tipText}>Stay aware of your surroundings</Text>
-          </View>
-          <View style={styles.tipItem}>
-            <Phone size={16} color="#20B2AA" />
-            <Text style={styles.tipText}>
-              Keep emergency contacts readily available
-            </Text>
-          </View>
-        </View>
-      </View>
-    </ScrollView>
+      </LinearGradient>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  backgroundImage: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   header: {
-    paddingTop: 50,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    marginTop: 50,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    padding: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   headerContent: {
     flexDirection: 'row',
@@ -378,58 +424,88 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontFamily: 'Poppins-Bold',
     color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   headerSubtitle: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
     color: '#FFFFFF',
     opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   reportButton: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  reportButtonBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
   },
   reportButtonText: {
     fontSize: 14,
     fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
     marginLeft: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   statusContainer: {
     padding: 20,
   },
   statusCard: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  statusGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
-    borderRadius: 16,
+  },
+  statusTextContainer: {
+    marginLeft: 12,
+    flex: 1,
   },
   statusTitle: {
     fontSize: 16,
     fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
-    marginLeft: 12,
-    flex: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   statusLocation: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
     color: '#FFFFFF',
     opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   section: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
+  sectionHeader: {
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
   sectionTitle: {
     fontSize: 20,
     fontFamily: 'Poppins-SemiBold',
-    color: '#333',
-    marginBottom: 16,
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.7)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   emergencyGrid: {
     flexDirection: 'row',
@@ -438,21 +514,18 @@ const styles = StyleSheet.create({
   },
   emergencyCard: {
     width: (width - 60) / 2,
-    backgroundColor: '#FFFFFF',
+    marginBottom: 12,
     borderRadius: 16,
+    overflow: 'hidden',
+  },
+  emergencyCardBlur: {
     padding: 16,
     alignItems: 'center',
-    marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   emergencyIcon: {
     width: 50,
     height: 50,
-    backgroundColor: '#FFF5F5',
+    backgroundColor: 'rgba(255, 245, 245, 0.8)',
     borderRadius: 25,
     justifyContent: 'center',
     alignItems: 'center',
@@ -474,61 +547,56 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   filterButton: {
+    marginRight: 12,
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  filterButtonBlur: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 12,
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-  },
-  filterButtonActive: {
-    backgroundColor: '#20B2AA',
   },
   filterText: {
     fontSize: 14,
     fontFamily: 'Poppins-Medium',
-    color: '#666',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   filterTextActive: {
-    color: '#FFFFFF',
+    color: '#333',
+    textShadowColor: 'transparent',
   },
   filterBadge: {
-    backgroundColor: '#E0E0E0',
+    backgroundColor: 'rgba(224, 224, 224, 0.3)',
     borderRadius: 10,
     paddingHorizontal: 6,
     paddingVertical: 2,
     marginLeft: 8,
   },
   filterBadgeActive: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
   },
   filterBadgeText: {
     fontSize: 10,
     fontFamily: 'Poppins-Bold',
-    color: '#666',
+    color: '#FFFFFF',
   },
   filterBadgeTextActive: {
-    color: '#FFFFFF',
+    color: '#333',
   },
   alertsList: {
     paddingHorizontal: 20,
   },
   alertCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
     marginBottom: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  alertCardBlur: {
+    padding: 16,
   },
   alertHeader: {
     flexDirection: 'row',
@@ -559,8 +627,9 @@ const styles = StyleSheet.create({
   alertLocation: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
-    color: '#666',
+    color: '#333',
     marginLeft: 4,
+    opacity: 0.8,
   },
   alertTime: {
     flexDirection: 'row',
@@ -569,15 +638,17 @@ const styles = StyleSheet.create({
   alertTimeText: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
-    color: '#666',
+    color: '#333',
     marginLeft: 4,
+    opacity: 0.8,
   },
   alertDescription: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
-    color: '#666',
+    color: '#333',
     lineHeight: 20,
     marginBottom: 12,
+    opacity: 0.9,
   },
   alertFooter: {
     flexDirection: 'row',
@@ -596,8 +667,9 @@ const styles = StyleSheet.create({
   statText: {
     fontSize: 12,
     fontFamily: 'Poppins-Regular',
-    color: '#666',
+    color: '#333',
     marginLeft: 4,
+    opacity: 0.8,
   },
   verifiedBadge: {
     flexDirection: 'row',
@@ -624,6 +696,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     overflow: 'hidden',
   },
+  mapButtonBlur: {
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
   mapButtonGradient: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -635,24 +711,28 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
     marginLeft: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
   },
   tipsContainer: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
+    overflow: 'hidden',
   },
   tipItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: 'rgba(240, 240, 240, 0.3)',
   },
   tipText: {
     fontSize: 14,
     fontFamily: 'Poppins-Regular',
-    color: '#666',
+    color: '#333',
     marginLeft: 12,
     flex: 1,
+    opacity: 0.9,
   },
 });
