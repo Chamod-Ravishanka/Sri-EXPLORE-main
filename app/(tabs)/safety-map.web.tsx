@@ -10,23 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  ArrowLeft,
-  Search,
-  MapPin,
-  Navigation,
-  Layers,
-  Filter,
-  AlertTriangle,
-  Shield,
-  Eye,
-  Waves,
-  CreditCard,
-  X,
-  Crosshair,
-  Globe,
-  Smartphone,
-} from 'lucide-react-native';
+import { ArrowLeft, Search, MapPin, Navigation, Layers, Filter, TriangleAlert as AlertTriangle, Shield, Eye, Waves, CreditCard, X, Crosshair, Globe, Smartphone } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 

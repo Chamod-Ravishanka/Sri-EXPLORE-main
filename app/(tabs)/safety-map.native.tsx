@@ -15,21 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import * as Location from 'expo-location';
 import MapView, { Marker, Heatmap, PROVIDER_GOOGLE } from 'react-native-maps';
-import {
-  ArrowLeft,
-  Search,
-  MapPin,
-  Navigation,
-  Layers,
-  Filter,
-  AlertTriangle,
-  Shield,
-  Eye,
-  Waves,
-  CreditCard,
-  X,
-  Crosshair,
-} from 'lucide-react-native';
+import { ArrowLeft, Search, MapPin, Navigation, Layers, Filter, TriangleAlert as AlertTriangle, Shield, Eye, Waves, CreditCard, X, Crosshair } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
