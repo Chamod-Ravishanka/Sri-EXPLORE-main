@@ -43,8 +43,22 @@ export default function SafetyScreen() {
     anonymous: false,
   });
   
-  // Animation refs
-  const sosAnim = useRef(new Animated.Value(1)).current;
+  // Enhanced SOS Animation refs
+  const sosScaleAnim = useRef(new Animated.Value(1)).current;
+  const sosPulseAnim = useRef(new Animated.Value(1)).current;
+  const sosRotateAnim = useRef(new Animated.Value(0)).current;
+  const sosGlowAnim = useRef(new Animated.Value(0)).current;
+  const sosRippleAnim = useRef(new Animated.Value(0)).current;
+  const sosShakeAnim = useRef(new Animated.Value(0)).current;
+  
+  // Multiple ripple effects
+  const rippleAnims = useRef([
+    new Animated.Value(0),
+    new Animated.Value(0),
+    new Animated.Value(0),
+  ]).current;
+  
+  // Other animation refs
   const alertsAnim = useRef(new Animated.Value(0)).current;
   const slideAnims = useRef<Animated.Value[]>([]).current;
 
@@ -102,20 +116,90 @@ export default function SafetyScreen() {
   ];
 
   useEffect(() => {
-    // Start SOS pulsing animation
-    const startSOSAnimation = () => {
+    // Enhanced SOS Button Animations
+    const startSOSAnimations = () => {
+      // Main pulsing effect
       Animated.loop(
         Animated.sequence([
-          Animated.timing(sosAnim, {
-            toValue: 1.2,
-            duration: 1000,
+          Animated.timing(sosPulseAnim, {
+            toValue: 1.3,
+            duration: 800,
             useNativeDriver: true,
           }),
-          Animated.timing(sosAnim, {
+          Animated.timing(sosPulseAnim, {
             toValue: 1,
-            duration: 1000,
+            duration: 800,
             useNativeDriver: true,
           }),
+        ])
+      ).start();
+
+      // Continuous rotation
+      Animated.loop(
+        Animated.timing(sosRotateAnim, {
+          toValue: 1,
+          duration: 4000,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Glow effect
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(sosGlowAnim, {
+            toValue: 1,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sosGlowAnim, {
+            toValue: 0,
+            duration: 1500,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+
+      // Ripple effects with staggered timing
+      const startRipples = () => {
+        rippleAnims.forEach((ripple, index) => {
+          Animated.loop(
+            Animated.sequence([
+              Animated.delay(index * 600),
+              Animated.timing(ripple, {
+                toValue: 1,
+                duration: 2000,
+                useNativeDriver: true,
+              }),
+              Animated.timing(ripple, {
+                toValue: 0,
+                duration: 0,
+                useNativeDriver: true,
+              }),
+            ])
+          ).start();
+        });
+      };
+      startRipples();
+
+      // Subtle shake effect for urgency
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(sosShakeAnim, {
+            toValue: 1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sosShakeAnim, {
+            toValue: -1,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.timing(sosShakeAnim, {
+            toValue: 0,
+            duration: 100,
+            useNativeDriver: true,
+          }),
+          Animated.delay(3000),
         ])
       ).start();
     };
@@ -141,9 +225,38 @@ export default function SafetyScreen() {
       ]).start();
     };
 
-    startSOSAnimation();
+    startSOSAnimations();
     animateAlerts();
   }, [safetyAlerts]);
+
+  // Enhanced SOS button press with haptic feedback
+  const handleSOSPress = () => {
+    // Immediate visual feedback
+    Animated.sequence([
+      Animated.timing(sosScaleAnim, {
+        toValue: 0.9,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sosScaleAnim, {
+        toValue: 1.1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(sosScaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    // Haptic feedback for mobile
+    if (Platform.OS !== 'web') {
+      // Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    }
+
+    setShowSOSPanel(true);
+  };
 
   const getAlertColor = (type: string) => {
     switch (type) {
@@ -221,6 +334,22 @@ export default function SafetyScreen() {
   const openSafetyMap = () => {
     router.push('/(tabs)/safety-map');
   };
+
+  // Interpolated values for animations
+  const rotateInterpolate = sosRotateAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  const glowOpacity = sosGlowAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.3, 0.8],
+  });
+
+  const shakeTranslate = sosShakeAnim.interpolate({
+    inputRange: [-1, 0, 1],
+    outputRange: [-2, 0, 2],
+  });
 
   return (
     <ImageBackground
@@ -342,22 +471,85 @@ export default function SafetyScreen() {
           </View>
         </ScrollView>
 
-        {/* Floating SOS Button */}
-        <TouchableOpacity
-          style={styles.sosButton}
-          onPress={() => setShowSOSPanel(true)}
-        >
-          <Animated.View style={[styles.sosButtonInner, { transform: [{ scale: sosAnim }] }]}>
-            <BlurView intensity={80} tint="light" style={styles.sosBlur}>
-              <LinearGradient
-                colors={['#FF6B6B', '#FF4444']}
-                style={styles.sosGradient}
-              >
-                <Text style={styles.sosText}>SOS</Text>
-              </LinearGradient>
-            </BlurView>
+        {/* Enhanced Floating SOS Button with Multiple Effects */}
+        <View style={styles.sosContainer}>
+          {/* Ripple Effects */}
+          {rippleAnims.map((ripple, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.sosRipple,
+                {
+                  opacity: ripple.interpolate({
+                    inputRange: [0, 0.5, 1],
+                    outputRange: [0.8, 0.4, 0],
+                  }),
+                  transform: [
+                    {
+                      scale: ripple.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [1, 2.5],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+          ))}
+
+          {/* Glow Effect */}
+          <Animated.View
+            style={[
+              styles.sosGlow,
+              {
+                opacity: glowOpacity,
+                transform: [{ scale: sosPulseAnim }],
+              },
+            ]}
+          />
+
+          {/* Main SOS Button */}
+          <TouchableOpacity
+            style={styles.sosButton}
+            onPress={handleSOSPress}
+            activeOpacity={0.8}
+          >
+            <Animated.View
+              style={[
+                styles.sosButtonInner,
+                {
+                  transform: [
+                    { scale: Animated.multiply(sosScaleAnim, sosPulseAnim) },
+                    { rotate: rotateInterpolate },
+                    { translateX: shakeTranslate },
+                  ],
+                },
+              ]}
+            >
+              <BlurView intensity={80} tint="light" style={styles.sosBlur}>
+                <LinearGradient
+                  colors={['#FF6B6B', '#FF4444', '#CC0000']}
+                  style={styles.sosGradient}
+                >
+                  <Text style={styles.sosText}>SOS</Text>
+                  <View style={styles.sosInnerGlow} />
+                </LinearGradient>
+              </BlurView>
+            </Animated.View>
+          </TouchableOpacity>
+
+          {/* Emergency Indicator */}
+          <Animated.View
+            style={[
+              styles.emergencyIndicator,
+              {
+                opacity: sosGlowAnim,
+              },
+            ]}
+          >
+            <Text style={styles.emergencyText}>EMERGENCY</Text>
           </Animated.View>
-        </TouchableOpacity>
+        </View>
 
         {/* Floating Report Button */}
         <TouchableOpacity
@@ -704,19 +896,53 @@ const styles = StyleSheet.create({
     flex: 1,
     opacity: 0.9,
   },
-  sosButton: {
+  // Enhanced SOS Button Styles
+  sosContainer: {
     position: 'absolute',
     bottom: 100,
     right: 20,
+    width: 100,
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sosRipple: {
+    position: 'absolute',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FF6B6B',
+    borderWidth: 2,
+    borderColor: '#FF4444',
+  },
+  sosGlow: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FF6B6B',
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 1,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  sosButton: {
     width: 80,
     height: 80,
     borderRadius: 40,
+    zIndex: 10,
   },
   sosButtonInner: {
     width: '100%',
     height: '100%',
     borderRadius: 40,
     overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
   },
   sosBlur: {
     width: '100%',
@@ -729,18 +955,43 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   sosText: {
     fontSize: 18,
     fontFamily: 'Poppins-Bold',
     color: '#FFFFFF',
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 4,
+    letterSpacing: 1,
+  },
+  sosInnerGlow: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    right: 8,
+    bottom: 8,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  emergencyIndicator: {
+    position: 'absolute',
+    bottom: -25,
+    alignItems: 'center',
+  },
+  emergencyText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Bold',
+    color: '#FF6B6B',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
     textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 2,
+    letterSpacing: 1,
   },
   reportButton: {
     position: 'absolute',
-    bottom: 200,
+    bottom: 220,
     right: 20,
     width: 60,
     height: 60,
