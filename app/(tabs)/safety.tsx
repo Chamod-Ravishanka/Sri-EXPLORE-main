@@ -253,7 +253,26 @@ export default function SafetyScreen() {
             </TouchableOpacity>
           </BlurView>
 
-          {/* Real-time Safety Alerts */}
+          {/* Interactive Safety Map Button - Moved to top */}
+          <TouchableOpacity style={styles.safetyMapButton} onPress={openSafetyMap}>
+            <BlurView intensity={90} tint="light" style={styles.safetyMapButtonBlur}>
+              <LinearGradient
+                colors={['rgba(255, 107, 107, 0.9)', 'rgba(255, 140, 140, 0.8)']}
+                style={styles.safetyMapButtonGradient}
+              >
+                <MapPin size={32} color="#FFFFFF" />
+                <View style={styles.safetyMapButtonTextContainer}>
+                  <Text style={styles.safetyMapButtonTitle}>Interactive Safety Map</Text>
+                  <Text style={styles.safetyMapButtonSubtitle}>View danger zones & heatmap</Text>
+                </View>
+                <View style={styles.safetyMapButtonBadge}>
+                  <Text style={styles.safetyMapButtonBadgeText}>NEW</Text>
+                </View>
+              </LinearGradient>
+            </BlurView>
+          </TouchableOpacity>
+
+          {/* Real-time Safety Alerts - Moved below map button */}
           <View style={styles.section}>
             <BlurView intensity={60} tint="dark" style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>🚨 Real-time Safety Alerts</Text>
@@ -586,6 +605,62 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins-SemiBold',
     color: '#FFFFFF',
     marginLeft: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  safetyMapButton: {
+    margin: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#FF6B6B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+  },
+  safetyMapButtonBlur: {
+    borderRadius: 20,
+    overflow: 'hidden',
+  },
+  safetyMapButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    position: 'relative',
+  },
+  safetyMapButtonTextContainer: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  safetyMapButtonTitle: {
+    fontSize: 18,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  safetyMapButtonSubtitle: {
+    fontSize: 14,
+    fontFamily: 'Poppins-Regular',
+    color: '#FFFFFF',
+    opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 3,
+  },
+  safetyMapButtonBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  safetyMapButtonBadgeText: {
+    fontSize: 10,
+    fontFamily: 'Poppins-Bold',
+    color: '#FFFFFF',
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
